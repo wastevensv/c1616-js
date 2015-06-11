@@ -22,14 +22,21 @@ c88.js is a file containing the emulator without the GUI.
 You can use this to make your own gui.
 
 First get a c88 object like this:
+
+```
 	c = new c88();
+```
 
 Then you can set the memory which is an array of eight integers:
+```
 	c.mem=[224, 37, 6, 23, 64, 7, 1, 0];
+```
 
 Then run the program and update some kind of memory display:
+```
 	setInterval(
 		function(){
 			c.step();
 			myDisplay = c.mem;
 		},1);
+```
