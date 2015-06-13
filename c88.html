@@ -180,6 +180,63 @@
 			updateMem();
 		}
 
+		//Initialisation
+		var QueryString = function () {
+		  // This function is anonymous, is executed immediately and 
+		  // the return value is assigned to QueryString!
+		  var query_string = {};
+		  var query = window.location.search.substring(1);
+		  var vars = query.split("&");
+		  for (var i=0;i<vars.length;i++) {
+		    var pair = vars[i].split("=");
+			// If first entry with this name
+		    if (typeof query_string[pair[0]] === "undefined") {
+		      query_string[pair[0]] = pair[1];
+			// If second entry with this name
+		    } else if (typeof query_string[pair[0]] === "string") {
+		      var arr = [ query_string[pair[0]], pair[1] ];
+		      query_string[pair[0]] = arr;
+			// If third or later entry with this name
+		    } else {
+		      query_string[pair[0]].push(pair[1]);
+		    }
+		  } 
+		    return query_string;
+		} ();
+
+		if (typeof QueryString.preload !== 'undefined') {
+	    		myReg = QueryString.preload;
+			c.reg = myReg;
+		}
+
+		if (typeof QueryString.mem !== 'undefined') {
+			var memStrings = QueryString.mem.split(",");
+			for (var i=0; i<= 7; i++){
+				myMem[i] = parseInt(memStrings[i]);
+			}
+			c.mem = myMem;
+		}
+
+		function genUrl(){
+
+			win = window.parent;
+
+			var url = win.location.href.split("?")[0]
+			var urlsearch = "";
+			if (myReg !=0){
+				urlsearch += "preload=" + myReg + "&";
+			}
+			urlsearch += "mem=" + myMem.join(",");
+			return url+"?"+urlsearch;
+		}
+
+		function urlToBox(){
+			output = document.getElementById("output");
+			output.value = genUrl();
+		}
+
+		window.onload = updateMem;
+
 	</script>
 	<style>
 		h3{
@@ -331,6 +388,15 @@
 			<td><img id="i5" src="images/bit_0.png" onclick="toggleInput(this)"/></td>
 			<td><img id="i6" src="images/bit_0.png" onclick="toggleInput(this)"/></td>
 			<td><img id="i7" src="images/bit_0.png" onclick="toggleInput(this)"/></td>
+		</tr>
+		<tr>
+			<td colspan="8"><h3>Generate a URL to link to this program</h3></td>
+		</tr>
+		<tr>
+			<td colspan="8"><p>Note that the register value will also be recorded.<br>Reset before generating link to avoid storing register.</p></td>
+		</tr>
+		<tr>
+			<td colspan="8"><input id="output" /> <button onclick="urlToBox()">Generate URL</button></td>
 		</tr>
 
 		

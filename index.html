@@ -3,9 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <title>C88 Computer Simulator</title>
+
+<script>
+
+	//returns true if str ends with suffix
+	function endsWith(str, suffix) {
+	    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+	}
+
+	window.onload = function(){
+		var url = window.location.href.split("?")[0];
+		if (endsWith(url, "index.html")){
+			url = url.slice(0, url.length-10);
+		}
+		iframe = document.getElementById("c88frame");
+		iframe.src = url+"c88.html"+window.location.search;
+	}
+</script>
+
 </head>
 <body>
-<iframe src="c88.html" width="500" height="879" frameBorder="0" scrolling="no" seamless="seamless"></iframe>
+<iframe id="c88frame" src="" width="500" height="1021" frameBorder="0" scrolling="no" seamless="seamless"></iframe>
 
 <div class="instructions">
 	<h2>Usage</h2>
