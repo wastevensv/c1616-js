@@ -4,8 +4,10 @@
 	<script src="c88.js"></script>
 	<script>
 
+		//C88 instance
 		var c = new c88();
 
+		//Memory array
 		var bits = [
 			0,0,0,0,0,0,0,0,
 			0,0,0,0,0,0,0,0,
@@ -17,27 +19,66 @@
 			0,0,0,0,0,0,0,0
 		];
 
+		//General purpos input
+		var inbits = [0,0,0,0,0,0,0,0];
+
+		//Integer copy of memory
 		var myMem = [0,0,0,0,0,0,0,0];
 	
+		//Integer versions of main reg, PC and output register.
 		var myReg = 0;
 		var myPC = 0;
+		var myOut = 0;
 
+		//returns true if str ends with suffix
 		function endsWith(str, suffix) {
 		    return str.indexOf(suffix, str.length - suffix.length) !== -1;
 		}
 
+		//Convert an array of eight bits to an integer
+		function bitsToNum(bits){
+			result = 0;
+			for (var b=0; b<=7; b++){
+				bitVal = (1<<(7-b));
+				result += bits[b] * bitVal;
+			}
+			return result;
+		}
+
+		//Convert an integer to an array of eight bits
+		function numToBits(num){
+			result = [0,0,0,0,0,0,0,0];
+			for (var b=0; b<=7; b++){
+				bitVal = (1<<(7-b));
+				result[b] = (((num&bitVal)>0)?1:0);
+			}
+			return result;
+		}
+
+		//GUI function. Set bits that the user can see on the screen.
+		function updateBits(prefix, bits, numbits){
+			//For each bit according to numbits total
+			for (var i=0; i<=numbits-1; i++){
+				//find the image tag which has an id that starts with the prefix and ends with the currend index
+				image = document.getElementById(prefix+i);
+				//Set it to be on or off depending on bits parameter
+				if (bits[i]==1){image.src="images/bit_1.png";}
+				else{image.src="images/bit_0.png";}
+			}
+		}
+
+		//Set the inputs to the C88 object (the memory and the GP input)
 		function refreshMem(){
 			for (i=0; i<=7; i++){
-				myMem[i] = 0;
-				for (var b=0; b<=7; b++){
-					bitVal = (1<<(7-b));
-					myMem[i] += bits[i*8+b] * bitVal;
-				}
+				myMem[i] = bitsToNum(bits.slice(i*8, i*8+8));
 			}
 			c.mem = myMem;
+
+			c.in = bitsToNum(inbits);
 			disassemble();
 		}
 
+		//Disassemble the program and show the disassembly to the right of the memory
 		function disassemble(){
 			for (var i=0; i<=7; i++){
 				textRow = document.getElementById("d"+i);
@@ -47,54 +88,42 @@
 			}
 		}
 
+		//Update the memory and other outputs on the GUI.
 		function updateMem(){
+
+			//Get all of the values we need
 			myMem = c.mem;
-			for (var i=0; i<=7; i++){
-				for (var b=0; b<=7; b++){
-					bitVal = (1<<(7-b));
-					bits[i*8+b] = (((myMem[i]&bitVal)>0)?1:0);
-				}
-			}
-
-			for (var i=0; i<=63; i++){
-				image = document.getElementById(""+i);
-				if (bits[i]){
-					image.src="images/bit_1.png";
-				}
-				else{
-					image.src="images/bit_0.png";
-				}
-			}
-
 			myReg = c.reg;
-
-			for (var b=0; b<=7; b++){
-				bitVal = (1<<(7-b));
-				image = document.getElementById("r"+b);
-				if ((myReg&bitVal)>0){
-					image.src="images/bit_1.png";
-				}
-				else{
-					image.src="images/bit_0.png";
-				}
-			}
-
 			myPC = c.pc;
+			myOut = c.out;
 
-			for (var b=0; b<=2; b++){
-				bitVal = (1<<(2-b));
-				image = document.getElementById("p"+b);
-				if ((myPC&bitVal)>0){
-					image.src="images/bit_1.png";
+			//Convert the memory from an integer array to a bit array, eight bits at a time
+				//Init
+				myMemLines = [[],[],[],[],[],[],[],[]];
+				//For each line
+				for (var i=0; i<=7; i++){
+					//Convert line to bits
+					myMemLines[i] = numToBits(myMem[i]);
 				}
-				else{
-					image.src="images/bit_0.png";
-				}
-			}
+				//Concatenate the arrays into one long 64 bit array
+				bits = [].concat.apply([], myMemLines);
 
+			//Convert the other outputs to bit arrays
+			myRegBits = numToBits(myReg);
+			myPCBits = numToBits(myPC).slice(5,8);
+			myOutBits = numToBits(myOut);
+
+			//Update the GUI with the new bit arrays
+			updateBits("", bits, 64);
+			updateBits("r", myRegBits, 8);
+			updateBits("p", myPCBits, 3);
+			updateBits("o", myOutBits, 8);
+
+			//Show the program.
 			disassemble();
 		}
 
+		//Toggle a memory bit (this is the image on click function)
 		function toggleBit(image){
 			if (endsWith(image.src,"images/bit_0.png")){
 				image.src="images/bit_1.png";
@@ -107,8 +136,23 @@
 			refreshMem();
 		}
 
+		//Toggle a GP inout bit (this is the image on click function)
+		function toggleInput(image){
+			if (endsWith(image.src,"images/bit_0.png")){
+				image.src="images/bit_1.png";
+				inbits[image.id[1]]=1;
+			}
+			else{
+				image.src="images/bit_0.png";
+				inbits[image.id[1]]=0;
+			}
+			refreshMem();
+		}
+
+		//This stores the current interval ID, if we have one.
 		var runner = -1;
 
+		//Run stop and reset functions follow...
 		function runSlow(){
 			stop();
 			runner = setInterval(step, 125);
@@ -137,6 +181,11 @@
 		}
 
 	</script>
+	<style>
+		h3{
+			margin-bottom:0em;
+		}
+	</style>
 </head>
 <body>
 	<h1>C88</h1>
@@ -249,6 +298,7 @@
 			<td><img id="p1" src="images/bit_0.png" /></td>
 			<td><img id="p2" src="images/bit_0.png" /></td>
 		</tr>
+
 		<tr>
 			<td colspan="8">
 				<button onclick="step()" >Step</button>
@@ -258,6 +308,32 @@
 				<button onclick="reset()" >Reset</button>
 			</td>
 		</tr>
+
+		<tr><td colspan="8"><h3>GP Output:</h3></td></tr>
+		<tr>
+			<td><img id="o0" src="images/bit_0.png" /></td>
+			<td><img id="o1" src="images/bit_0.png" /></td>
+			<td><img id="o2" src="images/bit_0.png" /></td>
+			<td><img id="o3" src="images/bit_0.png" /></td>
+			<td><img id="o4" src="images/bit_0.png" /></td>
+			<td><img id="o5" src="images/bit_0.png" /></td>
+			<td><img id="o6" src="images/bit_0.png" /></td>
+			<td><img id="o7" src="images/bit_0.png" /></td>
+		</tr>
+
+		<tr><td colspan="8"><h3>GP Input:</h3></td></tr>
+		<tr>
+			<td><img id="i0" src="images/bit_0.png" onclick="toggleInput(this)"/></td>
+			<td><img id="i1" src="images/bit_0.png" onclick="toggleInput(this)"/></td>
+			<td><img id="i2" src="images/bit_0.png" onclick="toggleInput(this)"/></td>
+			<td><img id="i3" src="images/bit_0.png" onclick="toggleInput(this)"/></td>
+			<td><img id="i4" src="images/bit_0.png" onclick="toggleInput(this)"/></td>
+			<td><img id="i5" src="images/bit_0.png" onclick="toggleInput(this)"/></td>
+			<td><img id="i6" src="images/bit_0.png" onclick="toggleInput(this)"/></td>
+			<td><img id="i7" src="images/bit_0.png" onclick="toggleInput(this)"/></td>
+		</tr>
+
+		
 	</table>
 </body>
 </html>
