@@ -1,6 +1,6 @@
 #C88 computer Javascript emulator
 
-This ia an emulator for the C88 computer.
+This is an emulator for the C88 computer.
 
 A minimalist CPU architecture with only 64 bits of memory.
 
