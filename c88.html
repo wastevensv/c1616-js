@@ -1,6 +1,7 @@
  <!DOCTYPE html>
 <html>
 <head>
+	<script src="js/iframeResizer.contentWindow.min.js"></script>
 	<script src="c88.js"></script>
 	<script>
 
@@ -84,7 +85,7 @@
 				textRow = document.getElementById("d"+i);
 				
 				var op = myMem[i] >> 3;
-				textRow.innerText = c.debug[op](myMem[i] & 7);
+				textRow.textContent = c.debug[op](myMem[i] & 7);
 			}
 		}
 
@@ -398,7 +399,9 @@
 		<tr>
 			<td colspan="9"><input id="output" /> <button onclick="urlToBox()">Generate URL</button></td>
 		</tr>
-
+		<tr>
+			<td colspan="9">&nbsp;</td>
+		</tr>
 		
 	</table>
 </body>

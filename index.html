@@ -19,12 +19,15 @@
 		iframe = document.getElementById("c88frame");
 		iframe.src = url+"c88.html"+window.location.search;
 	}
+
+	
 </script>
+<script src="js/iframeResizer.min.js"></script>
 
 </head>
 <body>
-<iframe id="c88frame" src="" width="500" height="1021" frameBorder="0" scrolling="no" seamless="seamless"></iframe>
-
+<iframe id="c88frame" src="" width="500" frameBorder="0" scrolling="no" seamless="seamless" onload="resizeIframe(this)"></iframe>
+<script>iFrameResize({})</script>
 <div class="instructions">
 	<h2>Usage</h2>
 		<p>
