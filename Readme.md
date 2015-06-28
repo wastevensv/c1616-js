@@ -1,10 +1,10 @@
 #C1616 computer Javascript emulator
 
-This is an emulator for the C1616 computer. It is based on the C88 computer, which used 8 bit words and had 8 memory locations.
+This is an emulator for the C1616 computer. It is based on the C88 computer by [Nick Moriarty](https://github.com/aquila12/) and [Daniel Bailey](https://github.com/danieljabailey/), which used 8 bit words and had 8 memory locations.
 
 A minimalist CPU architecture with only 256 bits of memory.
 
-The original 8 bit version is implemented in an FPGA using VHDL, it is available here: https://github.com/danieljabailey/C88
+The original 8 bit version is implemented in an FPGA using VHDL, it is available here: [https://github.com/danieljabailey/C88]
 
 This is an emulator for a 16 bit version of that machine, implemented in Javascript.
 
