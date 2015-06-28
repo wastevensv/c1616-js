@@ -1,21 +1,21 @@
 // States
-C88_STATE_READY = 0;
-C88_STATE_STOP  = 1;
-C88_STATE_HALT  = 2;
+C1616_STATE_READY = 0;
+C1616_STATE_STOP  = 1;
+C1616_STATE_HALT  = 2;
 
 // Helpers
 function signed(i)
 {
-  if ( i > 127 )
-    return i - (128*2);
+  if ( i > 32767)
+    return i - (32768*2);
   else
     return i;
-};
+}
 
 // Create the hardware!
-function c88()
+function C1616()
 {
-  this.instr = []
+  this.instr = [];
 
   this.instr[0] = function(i) { this.reg = this.mem[i]; };	// LOAD
   this.instr[1] = function(i) {					// SWAP
@@ -24,7 +24,7 @@ function c88()
     this.mem[i] = v;
   };
   this.instr[2] = function(i) { this.mem[i] = this.reg; };	// STORE
-  this.instr[3] = function(i) { this.state = C88_STATE_STOP; };	// STOP
+  this.instr[3] = function(i) { this.state = C1616_STATE_STOP; };	// STOP
 
   this.instr[4] = function(i) { if(this.mem[i] > this.reg) ++this.pc; };	// TSG
   this.instr[5] = function(i) { if(this.mem[i] < this.reg) ++this.pc; };	// TSL
@@ -33,8 +33,8 @@ function c88()
 
   this.instr[8] = function(i) { this.pc = i - 1; };		// JMP
   this.instr[9] = function(i) { this.pc = this.mem[i] - 1; };	// JMA
-  this.instr[10]= function(i) { this.state = C88_STATE_HALT; }; // Unused
-  this.instr[11]= function(i) { this.state = C88_STATE_HALT; }; // Unused
+  this.instr[10]= function(i) { this.state = C1616_STATE_HALT; }; // Unused
+  this.instr[11]= function(i) { this.state = C1616_STATE_HALT; }; // Unused
 
   this.instr[12]= function(i) { this.out = this.reg; };		// IOW
   this.instr[13]= function(i) { this.reg = this.in; };		// IOR
@@ -77,6 +77,9 @@ function c88()
   this.instr[29]= function(i) { this.reg -= 1; };		// DEC
   this.instr[30]= function(i) { this.reg *= 2; };		// DOUBLE
   this.instr[31]= function(i) { this.reg /= 2; };		// HALF
+  for (i = 32; i < 256; i++) {
+    this.instr[i]= function(i){ this.state = C1616_STATE_HALT;};
+  }
 
   this.debug = [];
 
@@ -115,14 +118,17 @@ function c88()
   this.debug[29]=function(i) { return "DEC"; };
   this.debug[30]=function(i) { return "DOUBLE"; };
   this.debug[31]=function(i) { return "HALF"; };
+  for (i = 32; i < 256; i++) {
+    this.debug[i]= function(i){ return "ILLEGAL OPCODE";};
+  }
 
   this.debugmode = false;
 
   this.nextinst = function() {
     inst = this.mem[this.pc];
-    op = inst >> 3;
-    op &= 0x1F;
-    imm = inst & 7;
+    op = inst >> 8;
+    op &= 0xff;
+    imm = inst & 0xff;
 
     this.d = this.debug[op];
     return "" + this.pc + ": " + this.d(imm);
@@ -136,24 +142,24 @@ function c88()
 
   // Execute the next instruction
   this.step = function() {
-    if (this.state != C88_STATE_READY) return;
+    if (this.state != C1616_STATE_READY) return;
 
     if (this.debugmode) {
       console.log(this.nextinst());
     }
 
     inst = this.mem[this.pc];
-    op = inst >> 3;
-    op &= 0x1F;
-    imm = inst & 7;
+    op = inst >> 8;
+    op &= 0xff;
+    imm = inst & 0xff;
 
     this.f = this.instr[op];
     this.f(imm);
 
-    this.reg &= 0xff;
+    this.reg &= 0xffff;
 
     ++this.pc;
-    this.pc &= 0x7;
+    this.pc &= 0xff;
 
     if (this.debugmode) {
       console.log(this.dumpstate());
@@ -163,11 +169,11 @@ function c88()
   this.reset = function() {
     this.reg = 0;
     this.pc = 0;
-    this.state = C88_STATE_READY
+    this.state = C1616_STATE_READY
   };
 
   this.clear = function() {
-    this.mem = [0,0,0,0,0,0,0,0];
+    this.mem = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   };
 
   this.clear();

@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>C88 Computer Simulator</title>
+<title>C1616 Computer Simulator</title>
 
 <script>
 
@@ -16,30 +16,30 @@
 		if (endsWith(url, "index.html")){
 			url = url.slice(0, url.length-10);
 		}
-		iframe = document.getElementById("c88frame");
-		iframe.src = url+"c88.html"+window.location.search;
+		iframe = document.getElementById("c1616frame");
+		iframe.src = url+"c1616.html"+window.location.search;
 	}
 
-	
+
 </script>
-<script src="js/iframeResizer.min.js"></script>
 
 </head>
 <body>
-<iframe id="c88frame" src="" width="500" frameBorder="0" scrolling="no" seamless="seamless" onload="resizeIframe(this)"></iframe>
+<script src="js/iframeResizer.min.js"></script>
+<iframe id="c1616frame" src="" width="1200" frameBorder="0" scrolling="no" seamless="seamless"></iframe>
 <script>iFrameResize({})</script>
 <div class="instructions">
 	<h2>Usage</h2>
 		<p>
-			Enter a program by clicking on the dots in the 8x8 memory grid.<br>
+			Enter a program by clicking on the dots in the 16x16 memory grid.<br>
 			Use the buttons at the bottom to step or run the program.<br>
 			Reset will cause the PC and the register to go to zero.
 		</p>
 	<h2>How it works</h2>
 		<p>
-			The C88 has a RAM which has eight locations, each location contains an eight bit word.<br>
+			The C1616 has a RAM which has sixteen locations, each location contains an 2 byte word.<br>
 			This RAM is for both program and data.<br>
-			There is also an eight bit register, known simply as "the register".<br>
+			There is also an sixteen bit register, known simply as "the register".<br>
 			To explain; here is an example program that adds two numbers together.<br>
 			<br>
 			0 - Load 4<br>
@@ -49,76 +49,77 @@
 			4 - 23<br>
 			5 - 15<br>
 			6 - (output location)<br>
-			7 - (unused)<br>
+			7-15 - (unused)<br>
 			<br>
 			The first instruction loads the number 23 in to the register from memory location 4.<br>
 			The second instruction adds 15 to the register and stores the result in the register. (15 is the value of memory location 5.)<br>
 			Then the result is stored in memory location 6.<br>
 			The program then stops.<br>
 			<br>
-			Try it <a href="index.html?mem=4,133,22,24,23,15,0,0">here</a>.<br>
+			Try it <a href="index.html?mem=4,4101,518,768,23,15,0,0">here</a>.<br>
 			<br>
 			It's that simple.<br>
 			The IO stuff is only really useful if you have a physical implementation of the machine.<br>
 		</p>
 	<h2>Some more interesting programs</h2>
 		<p>
-			<a href="?mem=224,37,6,23,64,7,1,0">Die roll</a>. Run fast and then stop to generate a random number in address 7. <br>
-			<a href="?mem=39,1,49,68,96,224,64,7">GPIO Die roll</a>. Same as above but outputs to GPIO register and is not biased towards six. <br>
-			<a href="?mem=65,1,177,40,66,185,49,69">Cylon</a>. Run slow to see a cylon flash cycle in the main register.<br>
+			<a href="?mem=7168,1029,6,519,2048,7,1,6">Die roll</a>. Run fast and then stop to generate a random number in address 7. <br>
+			<a href="?mem=1031,1,3073,2052,3072,7168,2048,7">GPIO Die roll</a>. Same as above but outputs to GPIO register and is not biased towards six. <br>
+			<a href="?mem=9,5121,1544,2049,5377,1545,2052,2048,128,1">Cylon</a>. Run slow to see a cylon flash cycle in the main register.<br>
 		</p>
 	<h2>Instruction encoding</h2>
 		<p>
-			Each C88 instruction is eight bits wide. The five most significant bits (the leftmost five bits) are the opcode. The three least significant bits are the address or operand.<br>
+			Each C1616 instruction is 2 bytes bits wide. The most significant byte (the leftmost byte) is the opcode. The least significant byte is the address or operand.<br>
 			<br>
-			Most instructions take an address. The shift and rotate functions take one operand (between 0 and 7).<br>
+			Most instructions take an address. The shift and rotate functions take one operand (between 0 and 15).<br>
 			The Inc, Dec, Double, Half, Stop and IO instructions require no address or operand.<br>
 			<ul>
-			<li>00000 LOAD	Load an address into the register</li>
-			<li>00001 SWAP	Swap the register value and the value at some address</li>
-			<li>00010 STORE	Store the register into an address</li>
-			<li style="margin-bottom:1em;">00011 STOP	Stop the program</li>
+			<li>00000000 LOAD	Load an address into the register</li>
+			<li>00000001 SWAP	Swap the register value and the value at some address</li>
+			<li>00000010 STORE	Store the register into an address</li>
+			<li style="margin-bottom:1em;">00000011 STOP	Stop the program</li>
 
-			<li>00100 TSG	Test, skip if greater</li>
-			<li>00101 TSL	Test, skip if less</li>
-			<li>00110 TSE	Test, skip if equal</li>
-			<li style="margin-bottom:1em;">00111 TSI	Test, skip if inequal</li>
+			<li>00000100 TSG	Test, skip if greater</li>
+			<li>00000101 TSL	Test, skip if less</li>
+			<li>00000110 TSE	Test, skip if equal</li>
+			<li style="margin-bottom:1em;">00000111 TSI	Test, skip if inequal</li>
 
-			<li>01000 JMP	Jump to specified address</li>
-			<li>01001 JMA	Jump to the address stored at the specified address</li>
-			<li>01010 (Not encoded) Use of this op code causes undefined behaviour. This emulator will halt on this instruction.</li>
-			<li style="margin-bottom:1em;">01011 (Not encoded)</li>
+			<li>00001000 JMP	Jump to specified address</li>
+			<li>00001001 JMA	Jump to the address stored at the specified address</li>
+			<li>00001010 (Not encoded) Use of this op code causes undefined behaviour. This emulator will halt on this instruction.</li>
+			<li style="margin-bottom:1em;">00001011 (Not encoded)</li>
 
-			<li>01100 IOW	IO write, write register to output</li>
-			<li>01101 IOR	IO read, read input to register</li>
-			<li>01110 IOS	IO swap, write register to output then load input to register</li>
-			<li style="margin-bottom:1em;">01111 IOC	IO clear, write 0 to output register</li>
+			<li>00001100 IOW	IO write, write register to output</li>
+			<li>00001101 IOR	IO read, read input to register</li>
+			<li>00001110 IOS	IO swap, write register to output then load input to register</li>
+			<li style="margin-bottom:1em;">00001111 IOC	IO clear, write 0 to output register</li>
 
-			<li>10000 ADD	Add value at address to register, result in register</li>
-			<li>10001 SUB	Subtract value at address from register, result in register</li>
-			<li>10010 MUL	Multiply value at address by register, result in register</li>
-			<li style="margin-bottom:1em;">10011 DIV	Divide register by value at address, result in register</li>
+			<li>00010000 ADD	Add value at address to register, result in register</li>
+			<li>00010001 SUB	Subtract value at address from register, result in register</li>
+			<li>00010010 MUL	Multiply value at address by register, result in register</li>
+			<li style="margin-bottom:1em;">00010011 DIV	Divide register by value at address, result in register</li>
 
-			<li>10100 SHL	Shift register left by amount specified (as address)</li>
-			<li>10101 SHR	Shift register right by amount specified (as address)</li>
-			<li>10110 ROL	Rotate register left by amount specified (as address)</li>
-			<li style="margin-bottom:1em;">10111 ROR	Rotate register right by amount specified (as address)</li>
+			<li>00010100 SHL	Shift register left by amount specified (as address)</li>
+			<li>00010101 SHR	Shift register right by amount specified (as address)</li>
+			<li>00010110 ROL	Rotate register left by amount specified (as address)</li>
+			<li style="margin-bottom:1em;">00010111 ROR	Rotate register right by amount specified (as address)</li>
 
-			<li>11000 ADDU	Same as ADD but unsigned (same as ADD, double encoded)</li>
-			<li>11001 SUBU	Same as SUB but unsigned (same as SUB, double encoded)</li>
-			<li>11010 MULU	Same as MUL but unsigned</li>
-			<li style="margin-bottom:1em;">11011 DIVU	Same as DIV but unsigned</li>
+			<li>00011000 ADDU	Same as ADD but unsigned (same as ADD, double encoded)</li>
+			<li>00011001 SUBU	Same as SUB but unsigned (same as SUB, double encoded)</li>
+			<li>00011010 MULU	Same as MUL but unsigned</li>
+			<li style="margin-bottom:1em;">00011011 DIVU	Same as DIV but unsigned</li>
 
-			<li>11100 INC	Increment register by one</li>
-			<li>11101 DEC	Decrement register by one</li>
-			<li>11110 DOUBLE	Double the value of the register</li>
-			<li>11111 HALF	Half the value of register</li>
+			<li>00011100 INC	Increment register by one</li>
+			<li>00011101 DEC	Decrement register by one</li>
+			<li>00011110 DOUBLE	Double the value of the register</li>
+			<li>00011111 HALF	Half the value of register</li>
 			</ul>
 		</p>
 	<h3>Copyright</h3>
 		<p>
 		&copy; Daniel Bailey 2015 (Machine spec, Simulator GUI and instructions, Die roll program)<br>
-		&copy; Nick Moriarty 2015 (Simulator back end, Cylon program)
+		&copy; Nick Moriarty 2015 (Simulator back end, Cylon program)<br>
+		&copy; William A Stevens V 2015 (Modified to support 16 bit words.)
 		</p>
 </div>
 
