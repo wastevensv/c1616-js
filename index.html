@@ -3,39 +3,700 @@
 <head>
 <meta charset="UTF-8">
 <title>C1616 Computer Simulator</title>
-
+<script src="js/iframeResizer.contentWindow.min.js"></script>
+<script src="c1616.js"></script>
 <script>
 
-	//returns true if str ends with suffix
-	function endsWith(str, suffix) {
-	    return str.indexOf(suffix, str.length - suffix.length) !== -1;
-	}
+  //C1616 instance
+  var c = new C1616();
 
-	window.onload = function(){
-		var url = window.location.href.split("?")[0];
-		if (endsWith(url, "index.html")){
-			url = url.slice(0, url.length-10);
-		}
-		iframe = document.getElementById("c1616frame");
-		iframe.src = url+"c1616.html"+window.location.search;
-	}
+  //Memory array
+  var bits = [
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+  ];
 
+  //General purpos input
+  var inbits = [
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+  ];
+
+  //Integer copy of memory
+  var myMem = [
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+  ];
+
+  //Integer versions of main reg, PC and output register.
+  var myReg = 0;
+  var myPC = 0;
+  var myOut = 0;
+
+  //returns true if str ends with suffix
+  function endsWith(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+  }
+
+  //Convert an array of eight bits to an integer
+  function bitsToNum(bits){
+    result = 0;
+    for (var b=0; b<=15; b++){
+      bitVal = (1<<(15-b));
+      result += bits[b] * bitVal;
+    }
+    return result;
+  }
+
+  //Convert an integer to an array of sixteen bits
+  function wordToBits(num){
+    result = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+    for (var b=0; b<=15; b++){
+      bitVal = (1<<(15-b));
+      result[b] = (((num&bitVal)>0)?1:0);
+    }
+    return result;
+  }
+
+  //Convert an integer to an array of eight bits
+  function byteToBits(num){
+    result = [0,0,0,0,0,0,0,0];
+    for (var b=0; b<=7; b++){
+      bitVal = (1<<(7-b));
+      result[b] = (((num&bitVal)>0)?1:0);
+    }
+    return result;
+  }
+
+  //GUI function. Set bits that the user can see on the screen.
+  function updateBits(prefix, bits, numbits){
+    //For each bit according to numbits total
+    for (var i=0; i<=numbits-1; i++){
+      //find the image tag which has an id that starts with the prefix and ends with the currend index
+      image = document.getElementById(prefix+i);
+      //Set it to be on or off depending on bits parameter
+      if (bits[i]==1){image.src="images/bit_1.png";}
+      else{image.src="images/bit_0.png";}
+    }
+  }
+
+  //Set the inputs to the C1616 object (the memory and the GP input)
+  function refreshMem(){
+    for (i=0; i<=15; i++){
+      myMem[i] = bitsToNum(bits.slice(i*16, i*16+16));
+    }
+    c.mem = myMem;
+
+    c.in = bitsToNum(inbits);
+    disassemble();
+  }
+
+  //Disassemble the program and show the disassembly to the right of the memory
+  function disassemble(){
+    for (var i=0; i<=15; i++){
+      textRow = document.getElementById("d"+i);
+
+      var op = myMem[i] >> 8;
+      textRow.textContent = c.debug[op](myMem[i] & 0xff);
+    }
+  }
+
+  //Update the memory and other outputs on the GUI.
+  function updateMem(){
+
+    //Get all of the values we need
+    myMem = c.mem;
+    myReg = c.reg;
+    myPC = c.pc;
+    myOut = c.out;
+
+    //Convert the memory from an integer array to a bit array, eight bits at a time
+    //Init
+    myMemLines = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]];
+    //For each line
+    for (var i=0; i<=15; i++){
+      //Convert line to bits
+      myMemLines[i] = wordToBits(myMem[i]);
+    }
+    //Concatenate the arrays into one long 64 bit array
+    bits = [].concat.apply([], myMemLines);
+
+    //Convert the other outputs to bit arrays
+    myRegBits = wordToBits(myReg);
+    myPCBits = byteToBits(myPC);
+    myOutBits = wordToBits(myOut);
+
+    //Update the GUI with the new bit arrays
+    updateBits("", bits, 256);
+    updateBits("r", myRegBits, 16);
+    updateBits("p", myPCBits, 8);
+    updateBits("o", myOutBits, 16);
+
+    //Show the program.
+    disassemble();
+  }
+
+  //Toggle a memory bit (this is the image on click function)
+  function toggleBit(image){
+    if (endsWith(image.src,"images/bit_0.png")){
+      image.src="images/bit_1.png";
+      bits[image.id]=1;
+    }
+    else{
+      image.src="images/bit_0.png";
+      bits[image.id]=0;
+    }
+    refreshMem();
+  }
+
+  //Toggle a GP inout bit (this is the image on click function)
+  function toggleInput(image){
+    if (endsWith(image.src,"images/bit_0.png")){
+      image.src="images/bit_1.png";
+      inbits[image.id[1]]=1;
+    }
+    else{
+      image.src="images/bit_0.png";
+      inbits[image.id[1]]=0;
+    }
+    refreshMem();
+  }
+
+  //This stores the current interval ID, if we have one.
+  var runner = -1;
+
+  //Run stop and reset functions follow...
+  function runSlow(){
+    stop();
+    runner = setInterval(step, 125);
+  }
+
+  function runFast(){
+    stop();
+    runner = setInterval(step, 1);
+  }
+
+  function step(){
+    c.step();
+    updateMem();
+  }
+
+  function stop(){
+    if (runner > -1){
+      clearInterval(runner);
+    }
+  }
+
+  function reset(){
+    stop();
+    c.reset();
+    updateMem();
+  }
+
+  //Initialisation
+  var QueryString = function () {
+    // This function is anonymous, is executed immediately and
+    // the return value is assigned to QueryString!
+    var query_string = {};
+    var query = window.location.search.substring(1);
+    var vars = query.split("&");
+    for (var i=0;i<vars.length;i++) {
+      var pair = vars[i].split("=");
+      // If first entry with this name
+      if (typeof query_string[pair[0]] === "undefined") {
+        query_string[pair[0]] = pair[1];
+        // If second entry with this name
+      } else if (typeof query_string[pair[0]] === "string") {
+        var arr = [ query_string[pair[0]], pair[1] ];
+        query_string[pair[0]] = arr;
+        // If third or later entry with this name
+      } else {
+        query_string[pair[0]].push(pair[1]);
+      }
+    }
+    return query_string;
+  } ();
+
+  if (typeof QueryString.preload !== 'undefined') {
+    myReg = QueryString.preload;
+    c.reg = myReg;
+  }
+
+  if (typeof QueryString.mem !== 'undefined') {
+    var memStrings = QueryString.mem.split(",");
+    for (var i=0; i<= 15; i++){
+      myMem[i] = parseInt(memStrings[i]);
+    }
+    c.mem = myMem;
+  }
+
+  function genUrl(){
+
+    win = window.parent;
+
+    var url = win.location.href.split("?")[0];
+    var urlsearch = "";
+    if (myReg !=0){
+      urlsearch += "preload=" + myReg + "&";
+    }
+    urlsearch += "mem=" + myMem.join(",");
+    return url+"?"+urlsearch;
+  }
+
+  function urlToBox(){
+    output = document.getElementById("output");
+    output.value = genUrl();
+  }
+
+  window.onload = updateMem;
 </script>
-
+<style>
+  h3{
+    margin-bottom:0em;
+  }
+</style>
 </head>
 <body>
-<script src="js/iframeResizer.min.js"></script>
-<iframe id="c1616frame" src="" width="1200" frameBorder="0" scrolling="no" seamless="seamless"></iframe>
-<script>iFrameResize({})</script>
-<div class="instructions">
-	<h2>Usage</h2>
+	<div id="c1616">
+		<h1>C1616</h1>
+		<h2>The 16 Address, 16 Bit computer</h2>
+		<h3>Memory:</h3>
+		<div class="memrow">
+			<img id="0" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="1" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="2" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="3" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="4" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="5" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="6" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="7" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="8" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="9" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="10" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="11" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="12" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="13" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="14" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="15" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d0"></span>
+		</div>
+		<div class="memrow">
+			<img id="16" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="17" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="18" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="19" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="20" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="21" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="22" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="23" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="24" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="25" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="26" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="27" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="28" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="29" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="30" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="31" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d1"></span>
+		</div>
+		<div class="memrow">
+			<img id="32" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="33" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="34" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="35" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="36" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="37" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="38" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="39" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="40" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="41" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="42" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="43" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="44" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="45" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="46" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="47" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d2"></span>
+		</div>
+		<div class="memrow">
+			<img id="48" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="49" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="50" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="51" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="52" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="53" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="54" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="55" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="56" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="57" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="58" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="59" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="60" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="61" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="62" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="63" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d3"></span>
+		</div>
+		<div class="memrow">
+			<img id="64" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="65" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="66" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="67" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="68" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="69" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="70" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="71" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="72" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="73" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="74" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="75" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="76" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="77" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="78" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="79" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d4"></span>
+		</div>
+		<div class="memrow">
+			<img id="80" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="81" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="82" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="83" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="84" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="85" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="86" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="87" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="88" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="89" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="90" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="91" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="92" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="93" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="94" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="95" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d5"></span>
+		</div>
+		<div class="memrow">
+			<img id="96" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="97" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="98" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="99" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="100" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="101" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="102" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="103" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="104" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="105" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="106" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="107" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="108" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="109" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="110" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="111" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d6"></span>
+		</div>
+		<div class="memrow">
+			<img id="112" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="113" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="114" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="115" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="116" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="117" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="118" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="119" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="120" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="121" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="122" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="123" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="124" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="125" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="126" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="127" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d7"></span>
+		</div>
+		<div class="memrow">
+			<img id="128" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="129" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="130" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="131" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="132" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="133" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="134" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="135" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="136" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="137" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="138" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="139" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="140" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="141" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="142" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="143" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d8"></span>
+		</div>
+		<div class="memrow">
+			<img id="144" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="145" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="146" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="147" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="148" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="149" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="150" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="151" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="152" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="153" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="154" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="155" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="156" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="157" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="158" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="159" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d9"></span>
+		</div>
+		<div class="memrow">
+			<img id="160" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="161" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="162" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="163" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="164" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="165" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="166" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="167" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="168" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="169" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="170" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="171" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="172" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="173" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="174" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="175" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d10"></span>
+		</div>
+		<div class="memrow">
+			<img id="176" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="177" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="178" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="179" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="180" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="181" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="182" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="183" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="184" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="185" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="186" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="187" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="188" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="189" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="190" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="191" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d11"></span>
+		</div>
+		<div class="memrow">
+			<img id="192" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="193" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="194" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="195" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="196" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="197" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="198" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="199" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="200" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="201" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="202" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="203" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="204" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="205" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="206" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="207" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d12"></span>
+		</div>
+		<div class="memrow">
+			<img id="208" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="209" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="210" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="211" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="212" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="213" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="214" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="215" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="216" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="217" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="218" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="219" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="220" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="221" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="222" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="223" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d13"></span>
+		</div>
+		<div class="memrow">
+			<img id="224" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="225" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="226" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="227" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="228" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="229" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="230" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="231" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="232" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="233" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="234" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="235" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="236" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="237" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="238" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="239" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d14"></span>
+		</div>
+		<div class="memrow">
+			<img id="240" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="241" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="242" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="243" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="244" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="245" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="246" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="247" src="images/bit_0.png" onclick="toggleBit(this)" />
+			&nbsp;
+			<img id="248" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="249" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="250" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="251" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="252" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="253" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="254" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<img id="255" src="images/bit_0.png" onclick="toggleBit(this)" />
+			<span id="d15"></span>
+		</div>
+
+		<h3>Main register:</h3>
+		<div>
+			<img id="r0" src="images/bit_0.png" />
+			<img id="r1" src="images/bit_0.png" />
+			<img id="r2" src="images/bit_0.png" />
+			<img id="r3" src="images/bit_0.png" />
+			<img id="r4" src="images/bit_0.png" />
+			<img id="r5" src="images/bit_0.png" />
+			<img id="r6" src="images/bit_0.png" />
+			<img id="r7" src="images/bit_0.png" />
+			&nbsp;
+			<img id="r8" src="images/bit_0.png" />
+			<img id="r9" src="images/bit_0.png" />
+			<img id="r10" src="images/bit_0.png" />
+			<img id="r11" src="images/bit_0.png" />
+			<img id="r12" src="images/bit_0.png" />
+			<img id="r13" src="images/bit_0.png" />
+			<img id="r14" src="images/bit_0.png" />
+			<img id="r15" src="images/bit_0.png" />
+		</div>
+		<h3>PC:</h3>
+		<div>
+			<img id="p0" src="images/bit_0.png" />
+			<img id="p1" src="images/bit_0.png" />
+			<img id="p2" src="images/bit_0.png" />
+			<img id="p3" src="images/bit_0.png" />
+			<img id="p4" src="images/bit_0.png" />
+			<img id="p5" src="images/bit_0.png" />
+			<img id="p6" src="images/bit_0.png" />
+			<img id="p7" src="images/bit_0.png" />
+			<!-- <img id="p8" src="images/bit_0.png" />
+			<img id="p9" src="images/bit_0.png" />
+			<img id="p10" src="images/bit_0.png" />
+			<img id="p11" src="images/bit_0.png" />
+			<img id="p12" src="images/bit_0.png" />
+			<img id="p13" src="images/bit_0.png" />
+			<img id="p14" src="images/bit_0.png" />
+			<img id="p15" src="images/bit_0.png" /> -->
+		</div>
+
+		<div>
+			<button onclick="step()" >Step</button>
+			<button onclick="runFast()" >Run Fast</button>
+			<button onclick="runSlow()" >Run Slow</button>
+			<button onclick="stop()" >Stop</button>
+			<button onclick="reset()" >Reset</button>
+		</div>
+
+		<h3>GP Output:</h3>
+		<div>
+			<img id="o0" src="images/bit_0.png" />
+			<img id="o1" src="images/bit_0.png" />
+			<img id="o2" src="images/bit_0.png" />
+			<img id="o3" src="images/bit_0.png" />
+			<img id="o4" src="images/bit_0.png" />
+			<img id="o5" src="images/bit_0.png" />
+			<img id="o6" src="images/bit_0.png" />
+			<img id="o7" src="images/bit_0.png" />
+			&nbsp;
+			<img id="o8" src="images/bit_0.png" />
+			<img id="o9" src="images/bit_0.png" />
+			<img id="o10" src="images/bit_0.png" />
+			<img id="o11" src="images/bit_0.png" />
+			<img id="o12" src="images/bit_0.png" />
+			<img id="o13" src="images/bit_0.png" />
+			<img id="o14" src="images/bit_0.png" />
+			<img id="o15" src="images/bit_0.png" />
+		</div>
+
+		<h3>GP Input:</h3>
+		<div>
+			<img id="i0" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i1" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i2" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i3" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i4" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i5" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i6" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i7" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			&nbsp;
+			<img id="i8" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i9" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i10" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i11" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i12" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i13" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i14" src="images/bit_0.png" onclick="toggleInput(this)"/>
+			<img id="i15" src="images/bit_0.png" onclick="toggleInput(this)"/>
+		</div>
+		<h3>Generate a URL to link to this program</h3>
+		<p>Note that the register value will also be recorded.<br>Reset before generating link to avoid storing register.</p>
+		<input id="output" /> <button onclick="urlToBox()">Generate URL</button>
+		&nbsp;
+	</div>
+	<div class="instructions">
+		<h2>Usage</h2>
 		<p>
 			Enter a program by clicking on the dots in the 16x16 memory grid.<br>
 			Use the buttons at the bottom to step or run the program.<br>
 			Reset will cause the PC and the register to go to zero.
 		</p>
-	<h2>How it works</h2>
+		<h2>How it works</h2>
 		<p>
 			The C1616 has a RAM which has sixteen locations, each location contains an 2 byte word.<br>
 			This RAM is for both program and data.<br>
@@ -61,67 +722,67 @@
 			It's that simple.<br>
 			The IO stuff is only really useful if you have a physical implementation of the machine.<br>
 		</p>
-	<h2>Some more interesting programs</h2>
+		<h2>Some more interesting programs</h2>
 		<p>
 			<a href="?mem=7168,1029,6,519,2048,7,1,6">Die roll</a>. Run fast and then stop to generate a random number in address 7. <br>
 			<a href="?mem=1031,1,3073,2052,3072,7168,2048,7">GPIO Die roll</a>. Same as above but outputs to GPIO register and is not biased towards six. <br>
 			<a href="?mem=9,5121,1544,2049,5377,1545,2052,2048,128,1">Cylon</a>. Run slow to see a cylon flash cycle in the main register.<br>
 		</p>
-	<h2>Instruction encoding</h2>
+		<h2>Instruction encoding</h2>
 		<p>
 			Each C1616 instruction is 2 bytes bits wide. The most significant byte (the leftmost byte) is the opcode. The least significant byte is the address or operand.<br>
 			<br>
 			Most instructions take an address. The shift and rotate functions take one operand (between 0 and 15).<br>
 			The Inc, Dec, Double, Half, Stop and IO instructions require no address or operand.<br>
 			<ul>
-			<li>00000000 LOAD	Load an address into the register</li>
-			<li>00000001 SWAP	Swap the register value and the value at some address</li>
-			<li>00000010 STORE	Store the register into an address</li>
-			<li style="margin-bottom:1em;">00000011 STOP	Stop the program</li>
+				<li>00000000 LOAD	Load an address into the register</li>
+				<li>00000001 SWAP	Swap the register value and the value at some address</li>
+				<li>00000010 STORE	Store the register into an address</li>
+				<li style="margin-bottom:1em;">00000011 STOP	Stop the program</li>
 
-			<li>00000100 TSG	Test, skip if greater</li>
-			<li>00000101 TSL	Test, skip if less</li>
-			<li>00000110 TSE	Test, skip if equal</li>
-			<li style="margin-bottom:1em;">00000111 TSI	Test, skip if inequal</li>
+				<li>00000100 TSG	Test, skip if greater</li>
+				<li>00000101 TSL	Test, skip if less</li>
+				<li>00000110 TSE	Test, skip if equal</li>
+				<li style="margin-bottom:1em;">00000111 TSI	Test, skip if inequal</li>
 
-			<li>00001000 JMP	Jump to specified address</li>
-			<li>00001001 JMA	Jump to the address stored at the specified address</li>
-			<li>00001010 (Not encoded) Use of this op code causes undefined behaviour. This emulator will halt on this instruction.</li>
-			<li style="margin-bottom:1em;">00001011 (Not encoded)</li>
+				<li>00001000 JMP	Jump to specified address</li>
+				<li>00001001 JMA	Jump to the address stored at the specified address</li>
+				<li>00001010 (Not encoded) Use of this op code causes undefined behaviour. This emulator will halt on this instruction.</li>
+				<li style="margin-bottom:1em;">00001011 (Not encoded)</li>
 
-			<li>00001100 IOW	IO write, write register to output</li>
-			<li>00001101 IOR	IO read, read input to register</li>
-			<li>00001110 IOS	IO swap, write register to output then load input to register</li>
-			<li style="margin-bottom:1em;">00001111 IOC	IO clear, write 0 to output register</li>
+				<li>00001100 IOW	IO write, write register to output</li>
+				<li>00001101 IOR	IO read, read input to register</li>
+				<li>00001110 IOS	IO swap, write register to output then load input to register</li>
+				<li style="margin-bottom:1em;">00001111 IOC	IO clear, write 0 to output register</li>
 
-			<li>00010000 ADD	Add value at address to register, result in register</li>
-			<li>00010001 SUB	Subtract value at address from register, result in register</li>
-			<li>00010010 MUL	Multiply value at address by register, result in register</li>
-			<li style="margin-bottom:1em;">00010011 DIV	Divide register by value at address, result in register</li>
+				<li>00010000 ADD	Add value at address to register, result in register</li>
+				<li>00010001 SUB	Subtract value at address from register, result in register</li>
+				<li>00010010 MUL	Multiply value at address by register, result in register</li>
+				<li style="margin-bottom:1em;">00010011 DIV	Divide register by value at address, result in register</li>
 
-			<li>00010100 SHL	Shift register left by amount specified (as address)</li>
-			<li>00010101 SHR	Shift register right by amount specified (as address)</li>
-			<li>00010110 ROL	Rotate register left by amount specified (as address)</li>
-			<li style="margin-bottom:1em;">00010111 ROR	Rotate register right by amount specified (as address)</li>
+				<li>00010100 SHL	Shift register left by amount specified (as address)</li>
+				<li>00010101 SHR	Shift register right by amount specified (as address)</li>
+				<li>00010110 ROL	Rotate register left by amount specified (as address)</li>
+				<li style="margin-bottom:1em;">00010111 ROR	Rotate register right by amount specified (as address)</li>
 
-			<li>00011000 ADDU	Same as ADD but unsigned (same as ADD, double encoded)</li>
-			<li>00011001 SUBU	Same as SUB but unsigned (same as SUB, double encoded)</li>
-			<li>00011010 MULU	Same as MUL but unsigned</li>
-			<li style="margin-bottom:1em;">00011011 DIVU	Same as DIV but unsigned</li>
+				<li>00011000 ADDU	Same as ADD but unsigned (same as ADD, double encoded)</li>
+				<li>00011001 SUBU	Same as SUB but unsigned (same as SUB, double encoded)</li>
+				<li>00011010 MULU	Same as MUL but unsigned</li>
+				<li style="margin-bottom:1em;">00011011 DIVU	Same as DIV but unsigned</li>
 
-			<li>00011100 INC	Increment register by one</li>
-			<li>00011101 DEC	Decrement register by one</li>
-			<li>00011110 DOUBLE	Double the value of the register</li>
-			<li>00011111 HALF	Half the value of register</li>
+				<li>00011100 INC	Increment register by one</li>
+				<li>00011101 DEC	Decrement register by one</li>
+				<li>00011110 DOUBLE	Double the value of the register</li>
+				<li>00011111 HALF	Half the value of register</li>
 			</ul>
 		</p>
-	<h3>Copyright</h3>
+		<h3>Copyright</h3>
 		<p>
-		&copy; Daniel Bailey 2015 (Machine spec, Simulator GUI and instructions, Die roll program)<br>
-		&copy; Nick Moriarty 2015 (Simulator back end, Cylon program)<br>
-		&copy; William A Stevens V 2015 (Modified to support 16 bit words.)
+			&copy; Daniel Bailey 2015 (Machine spec, Simulator GUI and instructions, Die roll program)<br>
+			&copy; Nick Moriarty 2015 (Simulator back end, Cylon program)<br>
+			&copy; William A Stevens V 2015 (Modified to support 16 bit words.)
 		</p>
-</div>
+	</div>
 
 </body>
 </html>
