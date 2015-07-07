@@ -79,6 +79,7 @@
   var myReg = 0;
   var myPC = 0;
   var myOut = 0;
+  var myIn = 0;
 
   //returns true if str ends with suffix
   function endsWith(str, suffix) {
@@ -133,8 +134,6 @@
       myMem[i] = bitsToNum(bits.slice(i*16, i*16+16));
     }
     c.mem = myMem;
-
-    c.in = bitsToNum(inbits);
     disassemble();
   }
 
@@ -155,7 +154,7 @@
     myMem = c.mem;
     myReg = c.reg;
     myPC = c.pc;
-    myOut = c.out;
+    myIn = c.in;
 
     //Convert the memory from an integer array to a bit array, eight bits at a time
     //Init
@@ -171,13 +170,15 @@
     //Convert the other outputs to bit arrays
     myRegBits = wordToBits(myReg);
     myPCBits = byteToBits(myPC);
-    myOutBits = wordToBits(myOut);
+    myInBits = wordToBits(myIn);
+    // myOutBits = wordToBits(myOut);
 
     //Update the GUI with the new bit arrays
     updateBits("", bits, 256);
     updateBits("r", myRegBits, 16);
     updateBits("p", myPCBits, 8);
-    updateBits("o", myOutBits, 16);
+    updateBits("i", myInBits, 16);
+    // updateBits("o", myOutBits, 16);
 
     //Show the program.
     disassemble();
@@ -200,13 +201,13 @@
   function toggleInput(image){
     if (endsWith(image.src,"images/bit_0.png")){
       image.src="images/bit_1.png";
-      inbits[image.id[1]]=1;
+      inbits[image.id.slice(1)]=1;
     }
     else{
       image.src="images/bit_0.png";
-      inbits[image.id[1]]=0;
+      inbits[image.id.slice(1)]=0;
     }
-    refreshMem();
+    c.in = bitsToNum(inbits);
   }
 
   //This stores the current interval ID, if we have one.
@@ -684,7 +685,7 @@
 			<button onclick="reset()" >Reset</button>
 		</div>
 
-		<h3>GP Output:</h3>
+		<!-- <h3>GP Output:</h3>
 		<div>
 			<img id="o0" src="images/bit_0.png" />
 			<img id="o1" src="images/bit_0.png" />
@@ -703,9 +704,9 @@
 			<img id="o13" src="images/bit_0.png" />
 			<img id="o14" src="images/bit_0.png" />
 			<img id="o15" src="images/bit_0.png" />
-		</div>
+		</div> -->
 
-		<h3>GP Input:</h3>
+		<h3>GPIO:</h3>
 		<div>
 			<img id="i0" src="images/bit_0.png" onclick="toggleInput(this)"/>
 			<img id="i1" src="images/bit_0.png" onclick="toggleInput(this)"/>
@@ -802,10 +803,10 @@
         </ul>
 
         <ul>
-				<li><pre>00001100 IOW   IO write, write register to output</pre></li>
-				<li><pre>00001101 IOR   IO read, read input to register</pre></li>
-				<li><pre>00001110 IOS   IO swap, write register to output then load input to register</pre></li>
-				<li><pre>00001111 IOC   IO clear, write 0 to output register</pre></li>
+				<li><pre>00001100 IOW   IO write, write main register to IO</pre></li>
+				<li><pre>00001101 IOR   IO read, read IO to main register</pre></li>
+				<li><pre>00001110 IOS   IO swap, swap IO and main register values</pre></li>
+				<li><pre>00001111 IOC   IO clear, write 0 to IO register</pre></li>
         </ul>
 
         <ul>

@@ -65,13 +65,14 @@ function C1616()
   }; // INT
   this.instr[11]= function(i) { this.state = C1616_STATE_HALT; }; // Unused
 
-  this.instr[12]= function(i) { this.out = this.reg; };		// IOW
+  this.instr[12]= function(i) { this.in = this.reg; };		// IOW
   this.instr[13]= function(i) { this.reg = this.in; };		// IOR
   this.instr[14]= function(i) {					// IOS
-    this.out = this.reg;
+    var tmp = this.reg
     this.reg = this.in;
+    this.in = tmp;
   };
-  this.instr[15]= function(i) { this.out = 0; };		// IOC
+  this.instr[15]= function(i) { this.in = 0; };		// IOC
 
   this.instr[16]= function(i) { this.reg += this.mem[i]; };	// ADD
   this.instr[17]= function(i) { this.reg -= this.mem[i]; };	// SUB
@@ -185,6 +186,7 @@ function C1616()
 
   this.clear = function() {
     this.mem = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+    this.in = 0;
   };
 
   this.clear();
